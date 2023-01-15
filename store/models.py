@@ -43,11 +43,6 @@ class Customer(models.Model):
     birthDate = models.DateField(null=True)
     membership = models.CharField(max_length=1, choices=MEMBERSHIP_CHOICES, default=MEMBERSHIP_BRONZE)
     
-    class Meta:
-        db_table = 'store_customers'
-        indexes = [
-            models.Index(fields=['lastName', 'firstName'])
-        ]
 
 class Order (models.Model):
     PAYMENT_STATUS_PENDING = 'P'
