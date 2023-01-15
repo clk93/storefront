@@ -5,5 +5,11 @@
         {% else %}
         <h1> Hello Friend</h1>
         {% endif %}
+        <ul>
+            {% for orderItem in orderItems %}
+            <li>{{ orderItem.product}}</li>
+            {% endfor %}
+        </ul>
+        {{ count }}
     </body>
 </html>

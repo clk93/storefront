@@ -16,3 +16,7 @@ Use https://mockaroo.com/ to create dummy data (like customer)
 
 ### Migration
 use seed.sql to import Data for Database
+
+### Debugging
+use django debug toolbar
+https://django-debug-toolbar.readthedocs.io/en/latest/installation.html
