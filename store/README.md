@@ -12,4 +12,7 @@ https://dev.mysql.com/downloads/mysql/
 unstall mysqlClient
 pip install mysqlclient
 
-Use https://mockaroo.com/ to create dummy data
+Use https://mockaroo.com/ to create dummy data (like customer)
+
+### Migration
+use seed.sql to import Data for Database

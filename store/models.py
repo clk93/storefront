@@ -15,14 +15,14 @@ class Product(models.Model):
     slug = models.SlugField()
     description = models.TextField()
     unit_price = models.DecimalField(max_digits=6, decimal_places=2)
-    number = models.IntegerField()
-    updateDate = models.DateTimeField(auto_now=True)
+    inventory = models.IntegerField()
+    last_update = models.DateTimeField(auto_now=True)
     collection = models.ForeignKey(Collection, on_delete=models.PROTECT)
     promotions = models.ManyToManyField(Promotion)
 
 class OrderItem(models.Model):
     quantity = models.PositiveSmallIntegerField()
-    unitPrice = models.DecimalField(max_digits=6, decimal_places=2)
+    unit_price = models.DecimalField(max_digits=6, decimal_places=2)
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     order = models.ForeignKey('Order', on_delete=models.PROTECT)
 
@@ -36,11 +36,11 @@ class Customer(models.Model):
         (MEMBERSHIP_SILVER, 'Silver'),
         (MEMBERSHIP_GOLD, 'Gold'),
     ]
-    firstName = models.CharField(max_length=255)    
-    lastName = models.CharField(max_length=255)
+    first_name = models.CharField(max_length=255)    
+    last_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=255)
-    birthDate = models.DateField(null=True)
+    birth_date = models.DateField(null=True)
     membership = models.CharField(max_length=1, choices=MEMBERSHIP_CHOICES, default=MEMBERSHIP_BRONZE)
     
 
@@ -54,8 +54,8 @@ class Order (models.Model):
         (PAYMENT_STATUS_COMPLETE, 'Complete'),
         (PAYMENT_STATUS_FAILED, 'Failed'),
     ]
-    placedAt = models.DateTimeField(auto_now_add=True)
-    paymentStatus = models.CharField(max_length=1, choices=PAYMENT_STATUS_CHOICES, default=PAYMENT_STATUS_PENDING)
+    placed_at = models.DateTimeField(auto_now_add=True)
+    payment_status = models.CharField(max_length=1, choices=PAYMENT_STATUS_CHOICES, default=PAYMENT_STATUS_PENDING)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
 
 class Cart(models.Model):
