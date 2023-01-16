@@ -6,10 +6,10 @@
         <h1> Hello Friend</h1>
         {% endif %}
         <ul>
-            {% for orderItem in orderItems %}
-            <li>{{ orderItem.product}}</li>
+            {% for product in products %}
+            <li>{{ product.title}} --- {{product.collection.title}}</li>
             {% endfor %}
         </ul>
-        {{ count }}
+        {{ product_count }}
     </body>
 </html>
