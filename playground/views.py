@@ -2,10 +2,13 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q, F, Count, Min, Max, Avg, Aggregate, Sum, Value, Func, ExpressionWrapper, DecimalField, BooleanField
 from django.db.models.functions import Concat
+from django.contrib.contenttypes.models import ContentType
 
-from store.models import Product, Customer, Collection, Order, OrderItem
+from store.models import Product, Customer, Collection, Order, OrderItem, Cart, CartItem
+from tag.models import TagItem
 
 
 # Create your views here.
@@ -93,8 +96,10 @@ def say_hello(request):
     # order by placed_at limit 5;
     # Remember: Django is creating the reverse relationship for foreign key related objects
     # default name orderitem_set for order in orderitem
-    ordersWithCustomerItemsAndProduct = Order.objects.select_related(
-        'customer').prefetch_related('orderitem_set__product').order_by('-placed_at')[:5]
+    ordersWithCustomerItemsAndProduct = Order.objects\
+        .select_related('customer')\
+        .prefetch_related('orderitem_set__product')\
+        .order_by('-placed_at')[:5]
     # return render(request, "hello.html", {"name":"Tina", "products": products_with_collection, 'product_count': products_without_duplicates.count()})
 
     #Aggregates don't return a query set, they return a dictonary
@@ -169,4 +174,92 @@ def say_hello(request):
         total_sales = Sum(F('orderitem__quantity') * F('orderitem__unit_price'))
     ).order_by('-total_sales')[0:5]
 
+
+    # Query generic relationships using custom manager
+    TagItem.objects.get_tags_for(Product, 1)
+
+    # Creationg an object
+    newCollection1 = Collection()
+    newCollection1.title = 'Video Games'
+    newCollection1.featured_product = Product(pk=1)
+    newCollection1.save()
+    # Alternative: 
+    Collection.objects.create(title='Music Disc', featured_product_id=2)
+
+    # Updating an object
+    updateCollection1 = Collection(pk=1)
+    updateCollection1.title = 'Video Games 2'
+    updateCollection1.featured_product = None
+    updateCollection1.save()
+    # Attention: if e.g. title is not set, cause update is not necessary for this field,
+    # Django will overwrite it and set title to empty field -> read fresh from the db and
+    # update fields, which should be changed
+    updateCollection2 = Collection.objects.get(pk=1)
+    updateCollection2.featured_product = None
+    updateCollection2.save()
+    #Alternative:
+    Collection.objects.filter(pk=3).update(featured_product=None)
+
+    # Deleting an Object
+    deleteCollection = Collection(pk=11)
+    deleteCollection.delete()
+    # Alternative
+    Collection.objects.filter(id__gt=7).delete()
+
+    """
+    Practice:
+    •Create a shopping cart with an item
+    •Update the quantity of an item in a shopping cart
+    •Remove a shopping cart with its items
+    """
+    newCart = Cart.objects.create()
+    newCartItem = CartItem()
+    newCartItem.cart = newCart
+    newCartItem.product = Product(pk=1)
+    newCartItem.quantity = 5
+    newCartItem.save()
+
+    CartItem.objects.filter(pk=1).update(quantity=7)
+
+    CartItem.objects.filter(pk=2).delete()
+    # also with delete on cascade deletion of Cart will also delete CartItem
+    Cart.objects.filter(pk=5).delete()
+
+    # Work with transactions as decorator
+    transactional_create_order()
+
+    # transaction with context manager
+    transaction_context_manager()
+
     return render(request, "hello.html", {"name": "Tina", "orders": ordersWithCustomerItemsAndProduct, 'oder_count': ordersWithCustomerItemsAndProduct.count(), 'order_aggregate': list(top_products)})
+
+@transaction.atomic()
+def transactional_create_order():
+    order = Order()
+    order.customer = Customer(pk=1)
+    order.save()
+
+    orderItem = OrderItem()
+    orderItem.order = order
+    orderItem.product = Product(pk=4)
+    orderItem.quantity = 42
+    orderItem.unit_price = 5
+    orderItem.save()
+
+def transaction_context_manager():
+    # .... code....
+
+    with transaction.atomic():
+        order = Order()
+        order.customer = Customer(pk=2)
+        order.save()
+
+        orderItem = OrderItem()
+        orderItem.order = order
+        orderItem.product = Product(pk=5)
+        orderItem.quantity = 42
+        orderItem.unit_price = 7
+        orderItem.save()
+
+    
+
