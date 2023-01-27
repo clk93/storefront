@@ -2,7 +2,8 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
-from django.db.models import Q, F, Count, Min, Max, Avg, Aggregate, Sum
+from django.db.models import Q, F, Count, Min, Max, Avg, Aggregate, Sum, Value, Func
+from django.db.models.functions import Concat
 
 from store.models import Product, Customer, Collection, Order, OrderItem
 
@@ -112,4 +113,21 @@ def say_hello(request):
     orders_placedBy_Customer1= Order.objects.filter(customer__id=1).aggregate(count=Count('id'))
     products_collection3 = Product.objects.filter(collection__id=3).aggregate(min=Min('unit_price'), max=Max('unit_price'), avg=Avg('unit_price'))
 
-    return render(request, "hello.html", {"name": "Tina", "orders": ordersWithCustomerItemsAndProduct, 'oder_count': ordersWithCustomerItemsAndProduct.count(), 'order_aggregate': products_collection3})
+    # Annotation: bring a new field to object
+    # Annotation needs a Expression (like Aggregate, F, Func, Value)
+    new_customer = Customer.objects.annotate(new_customer=Value(True))
+    new_customer_id = Customer.objects.annotate(new_id= F('id') + 1)
+    
+    # calling DB functions
+    customer_fullname = Customer.objects.annotate(full_name=Func(
+        # CONCAT
+        F('first_name'), Value(' '), F('last_name'), function='CONCAT'
+        ))
+    # Django DB functions: shorthand
+    customer_fullname_short = Customer.objects.annotate(
+        full_name=Concat('first_name', Value(' '), 'last_name')
+    )
+
+    #grouping date
+
+    return render(request, "hello.html", {"name": "Tina", "orders": ordersWithCustomerItemsAndProduct, 'oder_count': ordersWithCustomerItemsAndProduct.count(), 'order_aggregate': list(customer_fullname)})
