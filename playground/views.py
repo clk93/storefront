@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
-from django.db.models import Q, F, Count, Min, Max, Avg, Aggregate, Sum, Value, Func
+from django.db.models import Q, F, Count, Min, Max, Avg, Aggregate, Sum, Value, Func, ExpressionWrapper, DecimalField, BooleanField
 from django.db.models.functions import Concat
 
 from store.models import Product, Customer, Collection, Order, OrderItem
@@ -129,5 +129,44 @@ def say_hello(request):
     )
 
     #grouping date
+    countOrder = Customer.objects.annotate(
+        # caution, cause reverse relation field should have the name 'order-set' but
+        # for some reasons an FieldError is thrown, cause unknown field
+        order_count = Count('order')
+    )
 
-    return render(request, "hello.html", {"name": "Tina", "orders": ordersWithCustomerItemsAndProduct, 'oder_count': ordersWithCustomerItemsAndProduct.count(), 'order_aggregate': list(customer_fullname)})
+    # expression wrapper
+    discountPrice = ExpressionWrapper(F('unit_price') * 0.8, output_field=DecimalField())
+    orderWithDiscountPrice = Product.objects.annotate(
+        discount_price = discountPrice
+    )
+
+    """
+    practice:
+     •Customers with their last order ID
+     •Collections and count of their products 
+     •Customers with more than 5 orders
+     •Customers and the total amount they’ve spent
+     •Top 5 best-selling products and their total sales
+    """
+    customer_last_order_id = Customer.objects.annotate(
+        last_order_id = Max('order__id')
+    )
+
+    collection_count_product = Collection.objects.annotate(
+        count_products = Count('product')
+    )
+    
+    customer_with_more_than_5_orders = Customer.objects.annotate(
+        orders_count = Count('order')
+    ).filter(orders_count__gt=5)
+
+    customer_with_total_spent_amount = Customer.objects.annotate(
+        amount_spent = Sum(F('order__orderitem__quantity') * F('order__orderitem__unit_price'))
+    )
+
+    top_products = Product.objects.annotate(
+        total_sales = Sum(F('orderitem__quantity') * F('orderitem__unit_price'))
+    ).order_by('-total_sales')[0:5]
+
+    return render(request, "hello.html", {"name": "Tina", "orders": ordersWithCustomerItemsAndProduct, 'oder_count': ordersWithCustomerItemsAndProduct.count(), 'order_aggregate': list(top_products)})
