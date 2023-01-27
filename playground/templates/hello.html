@@ -6,10 +6,11 @@
         <h1> Hello Friend</h1>
         {% endif %}
         <ul>
-            {% for product in products %}
-            <li>{{ product.title}} --- {{product.collection.title}}</li>
+            {% for order in orders %}
+            <li>{{ order.id}} --- {{order.customer.email}}</li>
             {% endfor %}
         </ul>
-        {{ product_count }}
+        {{ oder_count }}
+        {{ order_aggregate }}
     </body>
 </html>
