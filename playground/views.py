@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import transaction, connection
 from django.db.models import Q, F, Count, Min, Max, Avg, Aggregate, Sum, Value, Func, ExpressionWrapper, DecimalField, BooleanField
 from django.db.models.functions import Concat
 from django.contrib.contenttypes.models import ContentType
@@ -230,6 +230,14 @@ def say_hello(request):
 
     # transaction with context manager
     transaction_context_manager()
+
+    # write raw SQL, if queries get too complex
+    querySetRaw = Product.objects.raw('SELECT * FROM store_product') 
+
+    # with an exception also cursor get's closed; otherwise use try finally block to close cursor
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT * FROM store_product')
+       # cursor.callproc('get_customers', [1,2])
 
     return render(request, "hello.html", {"name": "Tina", "orders": ordersWithCustomerItemsAndProduct, 'oder_count': ordersWithCustomerItemsAndProduct.count(), 'order_aggregate': list(top_products)})
 
