@@ -15,6 +15,8 @@ class TagItemManager(models.Manager):
 
 class Tag(models.Model):
     label = models.CharField(max_length=255)
+    def __str__(self) -> str:
+        return self.label
 
  # What Tag applied to what Object (Video, Order, etc) -> Generic relationships
 class TagItem(models.Model):

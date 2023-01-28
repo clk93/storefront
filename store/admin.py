@@ -5,6 +5,7 @@ from django.db.models import QuerySet, Count
 from django.http.request import HttpRequest
 from django.urls import reverse
 from django.utils.html import format_html
+
 from . import models
 
 admin.site.register(models.Address)
@@ -33,6 +34,12 @@ class InventoryFilter(admin.SimpleListFilter):
 
 @admin.register(models.Product)
 class ProductAdmin(admin.ModelAdmin):
+    actions = ['clear_inventory']
+    prepopulated_fields= {
+        'slug': ['title',]
+        }
+    autocomplete_fields=['collection']
+    search_fields=['title']
     list_display = ['title', 'unit_price',
                     'inventory_status', 'collection_title']
     list_editable = ['unit_price']
@@ -48,6 +55,15 @@ class ProductAdmin(admin.ModelAdmin):
         if product.inventory < INVENTORY_LIMIT:
             return INVENTORY_LOW
         return INVENTORY_OK
+    
+    # create custom action
+    @admin.action(description='clear inventory')
+    def clear_inventory(self, request: HttpRequest, querySet: QuerySet):
+        updated_count = querySet.update(inventory=0)
+        self.message_user(
+            request,
+            f'{updated_count} products were successfully updated'
+        )
 
 
 @admin.register(models.Customer)
@@ -74,12 +90,19 @@ class CustomerAdmin(admin.ModelAdmin):
             orders_count = Count('order')
         )
 
+class OrderItemInline(admin.TabularInline):
+    autocomplete_fields=['product']
+    model = models.OrderItem
+    extra = 0
 
 @admin.register(models.Order)
 class OrderAdmin(admin.ModelAdmin):
+    autocomplete_fields= ['customer']
+    ordering = ['placed_at']
+    inlines = [OrderItemInline]
+    search_fields=['placed_at']
     list_display = ['placed_at', 'payment_status',
                     'customer', 'customer_email']
-    ordering = ['placed_at']
     list_per_page = 10
     list_select_related = ['customer']
 
@@ -94,6 +117,7 @@ class OrderAdmin(admin.ModelAdmin):
 class CollectionAdmin(admin.ModelAdmin):
     # products_count is not a given field of Collection -> needs to be calculated
     list_display = ['title', 'products_count']
+    search_fields = ['title']
 
     @admin.display(ordering='products_count')
     def products_count(self, collection):
