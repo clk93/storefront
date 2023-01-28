@@ -26,40 +26,7 @@ def say_hello(request):
     for product in query_set[0:5]:
         pass
 
-    product1 = Product.objects.get(pk=1)
-
-    # if a product does not exist by id, exception will be thrown
-    try:
-        product_not_exist = Product.objects.get(pk=0)
-    except ObjectDoesNotExist:
-        pass
-
-    # but filter with first() method will deliver a non, if product does not
-    # exist, instead of throwing exception
-    product_none = Product.objects.filter(pk=1).first()
-
-    # check existence -> boolean
-    exists = Product.objects.filter(pk=42).exists()
-
-    # filter
-    product_price_greater_then_20 = Product.objects.filter(unit_price__gt=20)
-    querySet = Product.objects.filter(unit_price__range=(20, 50))
-
-    # filter through realtions
-    productsInCollectionSet = Product.objects.filter(collection_id__gt=3)
-
-    customer = Customer.objects.filter(email__icontains='.com')
-    collection = Collection.objects.filter(featured_product_id=None)
-    productsWithLowInventory = Product.objects.filter(inventory__lt=10)
-    orders = Order.objects.filter(customer__id=1)
-
-    # SQL query:
-    # select count(*) from store_orderItem
-    # join store_product on store_orderItem.product_id = store_product.id
-    # join store_collection on store_product.collection_id = store_collection.id
-    # where store_collection.id = 3;
-    orderItems = OrderItem.objects.filter(product__collection__id=3)
-    count = OrderItem.objects.filter(product__collection__id=3).count()
+    getAndFilterDBObjects()
 
     # query expressions with Query Object unit_price > 10 OR NOT inventory <=2
     Product.objects.filter(Q(unit_price__gt=10) | ~ Q(inventory__lte=3))
@@ -103,6 +70,65 @@ def say_hello(request):
     # return render(request, "hello.html", {"name":"Tina", "products": products_with_collection, 'product_count': products_without_duplicates.count()})
 
     #Aggregates don't return a query set, they return a dictonary
+    useAggregates()
+   
+    # Annotation: bring a new field to object
+    # Annotation needs a Expression (like Aggregate, F, Func, Value)
+    useAnnotations()
+
+    # Query generic relationships using custom manager
+    TagItem.objects.get_tags_for(Product, 1)
+
+    creatUpdateAndDeleteOperations()
+
+    # Work with transactions as decorator
+    transactional_create_order()
+
+    # transaction with context manager
+    transaction_context_manager()
+
+    # write raw SQL, if queries get too complex
+    writeRawSql()
+
+    return render(request, "hello.html", {"name": "Tina", "orders": ordersWithCustomerItemsAndProduct, 'oder_count': ordersWithCustomerItemsAndProduct.count()})
+
+def getAndFilterDBObjects():
+    product1 = Product.objects.get(pk=1)
+
+    # if a product does not exist by id, exception will be thrown
+    try:
+        product_not_exist = Product.objects.get(pk=0)
+    except ObjectDoesNotExist:
+        pass
+
+    # but filter with first() method will deliver a non, if product does not
+    # exist, instead of throwing exception
+    product_none = Product.objects.filter(pk=1).first()
+
+    # check existence -> boolean
+    exists = Product.objects.filter(pk=42).exists()
+
+    # filter
+    product_price_greater_then_20 = Product.objects.filter(unit_price__gt=20)
+    querySet = Product.objects.filter(unit_price__range=(20, 50))
+
+    # filter through realtions
+    productsInCollectionSet = Product.objects.filter(collection_id__gt=3)
+
+    customer = Customer.objects.filter(email__icontains='.com')
+    collection = Collection.objects.filter(featured_product_id=None)
+    productsWithLowInventory = Product.objects.filter(inventory__lt=10)
+    orders = Order.objects.filter(customer__id=1)
+
+    # SQL query:
+    # select count(*) from store_orderItem
+    # join store_product on store_orderItem.product_id = store_product.id
+    # join store_collection on store_product.collection_id = store_collection.id
+    # where store_collection.id = 3;
+    orderItems = OrderItem.objects.filter(product__collection__id=3)
+    count = OrderItem.objects.filter(product__collection__id=3).count()
+
+def useAggregates():
     product_aggregate = Product.objects.filter(collection__id=3).aggregate(count=Count('id'), minPrice=Min('unit_price'))
     order_aggregate = Order.objects.aggregate(count=Count('id'))
 
@@ -118,8 +144,7 @@ def say_hello(request):
     orders_placedBy_Customer1= Order.objects.filter(customer__id=1).aggregate(count=Count('id'))
     products_collection3 = Product.objects.filter(collection__id=3).aggregate(min=Min('unit_price'), max=Max('unit_price'), avg=Avg('unit_price'))
 
-    # Annotation: bring a new field to object
-    # Annotation needs a Expression (like Aggregate, F, Func, Value)
+def useAnnotations():
     new_customer = Customer.objects.annotate(new_customer=Value(True))
     new_customer_id = Customer.objects.annotate(new_id= F('id') + 1)
     
@@ -175,10 +200,8 @@ def say_hello(request):
     ).order_by('-total_sales')[0:5]
 
 
-    # Query generic relationships using custom manager
-    TagItem.objects.get_tags_for(Product, 1)
-
-    # Creationg an object
+def creatUpdateAndDeleteOperations():
+      # Creationg an object
     newCollection1 = Collection()
     newCollection1.title = 'Video Games'
     newCollection1.featured_product = Product(pk=1)
@@ -225,21 +248,6 @@ def say_hello(request):
     # also with delete on cascade deletion of Cart will also delete CartItem
     Cart.objects.filter(pk=5).delete()
 
-    # Work with transactions as decorator
-    transactional_create_order()
-
-    # transaction with context manager
-    transaction_context_manager()
-
-    # write raw SQL, if queries get too complex
-    querySetRaw = Product.objects.raw('SELECT * FROM store_product') 
-
-    # with an exception also cursor get's closed; otherwise use try finally block to close cursor
-    with connection.cursor() as cursor:
-        cursor.execute('SELECT * FROM store_product')
-       # cursor.callproc('get_customers', [1,2])
-
-    return render(request, "hello.html", {"name": "Tina", "orders": ordersWithCustomerItemsAndProduct, 'oder_count': ordersWithCustomerItemsAndProduct.count(), 'order_aggregate': list(top_products)})
 
 @transaction.atomic()
 def transactional_create_order():
@@ -269,5 +277,13 @@ def transaction_context_manager():
         orderItem.unit_price = 7
         orderItem.save()
 
-    
+def writeRawSql():
+    # option 1:
+    querySetRaw = Product.objects.raw('SELECT * FROM store_product') 
+
+    # option 2:
+    # with an exception also cursor get's closed; otherwise use try finally block to close cursor
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT * FROM store_product')
+       # cursor.callproc('get_customers', [1,2])
 
